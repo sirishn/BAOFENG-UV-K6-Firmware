@@ -55,7 +55,7 @@ Boolean CheckFreqInRange(U32 freq)
     
     tempFreq = freq / 10000;
     
-    if((tempFreq >= 1080) && (tempFreq < 1360))
+    if((tempFreq >= 879) && (tempFreq < 1360))
     {
         if(g_rfMoudel.amRxEn == 0)
         {//不允许航空接收
@@ -488,6 +488,7 @@ extern void VfoFreqTypeIn(STR_INPUTBOX *input)
     
     Radio_ReverseOff();  
 
+    /*   
     if(input->len == 1)
     {
         if(input->buf[0] == '0')
@@ -497,7 +498,8 @@ extern void VfoFreqTypeIn(STR_INPUTBOX *input)
             return;
         }
     }
-
+    */
+   
     //显示输入模式
     DisplayInputVfoFreq();
 

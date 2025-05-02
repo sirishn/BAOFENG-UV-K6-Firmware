@@ -15,7 +15,7 @@
 enum { GPIOx_RFIC_L=0, GPIOx_RFIC_H };
 enum { BAND_WIDE, BAND_NARROW, BAND_W20K};
 enum { RFIC_IDLE, RFIC_RXON, RFIC_TXON, RFIC_TONE, RFIC_TXTONE };
-enum { ModeAudio=0,ModeScramble,ModeDtmf,ModeFSK,ModeSelcall,ModeDet1050, ModeAM, ModeFM };//work mode
+enum { ModeAudio=0,ModeScramble,ModeDtmf,ModeFSK,ModeSelcall,ModeDet1050, ModeAM, ModeFM,ModeWFM };//work mode
 
 typedef enum
 {
@@ -172,5 +172,9 @@ extern U8  Rfic_MDC1200Transmit(U16 *pData);
 extern U8  Rfic_GetMDC1200RxFlag(void);
 extern U8  Rfic_ReadMDC1200Data(U16 *pData);
 extern void Rfic_MDC1200ToneTx(void);
+
+
+// RF Baseband
+extern void SetTxMod(void);
 
 #endif

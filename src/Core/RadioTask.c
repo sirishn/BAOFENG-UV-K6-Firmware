@@ -82,6 +82,14 @@ Boolean CheckFreqInTxFreqRange(U32 freq)
         return TRUE;
     }
 
+    if(tempFreq < 1080) {
+        return TRUE;
+    }
+    
+    if(tempFreq >= 1080 && tempFreq<1360){
+        return TRUE; //AM out
+    }
+
     if((tempFreq >= bandRang.bandFreq.uhfL) && (tempFreq < bandRang.bandFreq.uhfH))
     { 
         return TRUE;
@@ -330,6 +338,7 @@ extern void RF_TxTask(void)
             break;
         case WAIT_PTT_RELEASE:
            TotTimeWarning();
+           
 
            if(alarmDat.alarmStates || g_sysRunPara.rfTxFlag.voxWorkDly)
            {

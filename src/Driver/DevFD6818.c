@@ -23,6 +23,7 @@
 #define REG_59    0x0028
 
 #define REG_40    0x04E0
+#define REG_40_WFM     0x0910
 
 #define FSK_LEN        8       // 8Word = 16Byte
 /*----------------------------------------------------------------------*/
@@ -48,6 +49,40 @@ static  U32  DCS_DATA;               // 二进制数据流
 static  U8   ctsDcsCodeType;
 
 static U8  RF_Baseband_Mode = ModeFM;        // Rfic工作模式
+
+//static U16 power_temp = 0;
+//static bool power_phase = 0;
+void SetTxMod(void)
+{
+     
+    //U16 temp2;
+    //temp = Rfic_ReadWord(0x87)&0x007F;
+    //temp = temp<<12;
+    
+    /*
+    temp2= Rfic_ReadWord(0x28)&0xFFC0;
+    if (power_phase=0){
+        power_temp++;
+        if (power_temp>0x0FFA){
+            power_phase=1;
+        }
+    }
+    else{
+        power_temp--;
+        if (power_temp<0x0005){
+            power_phase=0;
+        }
+    }
+    */
+    if (RF_Baseband_Mode == ModeAM){
+        U16 temp;
+        temp = UserADC_GetValOfVox()&0x00FF;
+        Rfic_WriteWord( 0x36, 0xFFC0 | temp>>2  );// REG_36[7]: 1:Enable PACTL output  0:Disable
+        
+        //Rfic_WriteWord( 0x36, temp1 | tblPAGain[g_CurrentVfo->txPower % 3] );// REG_36[7]: 1:Enable PACTL output  0:Disable
+    }
+}
+
 
 void CTCSSCaleSkipFreq(U16 hopping_code, U16 pre_code, U16 ctc)
 {
@@ -533,15 +568,20 @@ void Rfic_SetScramble(U8 group,U32 freq)
 
     temp = Rfic_ReadWord(0x31);
 
-    if(freq >= 10800000 && freq < 13600000)
+    //special zones
+    if(freq>=8790000 && freq<10800000){
+        Rfic_SwitchFM_AM(ModeWFM);
+        return;
+        
+    }
+    else if(freq >= 10800000 && freq < 13600000)
     {
-        Rfic_WriteWord(0X31, temp & (~BIT1));
+        Rfic_SwitchFM_AM(ModeAM);
 
-        temp = Rfic_ReadWord(0x40) & 0xF000;
-        Rfic_WriteWord(0x40, temp | 0X04E0);
         return;
     }
-    
+   
+    // default stuffs
     if( group > 0 )
     {
         if(group > 3)
@@ -869,6 +909,8 @@ void  Rfic_BandInitial(U32 freq)
 ***********************************************************************/
 void Rfic_RxTxOnOffSetup(U8  ON_FLAG)
 {
+
+
     if(g_CurrentVfo->wideNarrow == BAND_WIDE && (ON_FLAG == RFIC_RXON || ON_FLAG == RFIC_TXON))
     {
         Rfic_WriteWord(0x30, 0x0200);
@@ -878,6 +920,9 @@ void Rfic_RxTxOnOffSetup(U8  ON_FLAG)
         Rfic_WriteWord(0x30, 0x0000);
     }
     
+
+    
+
     switch(ON_FLAG)
     {
         case RFIC_RXON:
@@ -885,6 +930,18 @@ void Rfic_RxTxOnOffSetup(U8  ON_FLAG)
             break;
 
         case RFIC_TXON:
+            /*
+            U16 temp;
+            temp = Rfic_ReadWord(0x40) & 0xF000;
+            if(g_CurrentVfo->tx->frequency < 10800000 ){
+                Rfic_WriteWord(0x40, temp | 0x00FF);
+            }
+            else
+            {
+                Rfic_WriteWord(0x40, temp | REG_40);
+            }
+            */
+
             Rfic_WriteWord(0x30, 0xC1FE);
             break;
 
@@ -1067,11 +1124,13 @@ void Rfic_ConfigRxMode(void)
     GetHardWorkBand(g_CurrentVfo->rx->frequency/10000);
     if(g_CurrentVfo->rx->frequency >= 10800000 && g_CurrentVfo->rx->frequency < 13600000 )
     {
-        Rfic_SwitchFM_AM(ON);
+        //Rfic_SwitchFM_AM(ON);
+        Rfic_SwitchFM_AM(ModeAM);
     }
     else
     {
-        Rfic_SwitchFM_AM(OFF);
+        //Rfic_SwitchFM_AM(OFF);
+        Rfic_SwitchFM_AM(ModeFM);
     }
     RF_PowerSet(g_ChannelVfoInfo.BandFlag,PWR_OFF);
     Rfic_WriteWord(0x37, REG_37 | 0x0F | BIT9);
@@ -1089,10 +1148,13 @@ void Rfic_ConfigTxMode(void)
     U16 temp,gain;
 
     RF_PowerSet(g_ChannelVfoInfo.BandFlag,PWR_OFF);
-    Rfic_SwitchFM_AM(ModeFM);
+    Rfic_SwitchFM_AM(ModeFM);   //default FM
     Rfic_WriteWord(0x37, REG_37 | 0x0F);
     Rfic_RxTxOnOffSetup(RFIC_IDLE);
     Rfic_BandInitial(g_CurrentVfo->tx->frequency);
+
+
+    
     CTS_DCS_SEND_Initial();
     gain = DEPTH_MIC_MODULATION % 32;
     temp = Rfic_ReadWord(0x7D) & 0XFFE0;
@@ -1101,6 +1163,10 @@ void Rfic_ConfigTxMode(void)
     Rfic_SetScramble(g_CurrentVfo->scarmble,g_CurrentVfo->tx->frequency);
     Rfic_RxTxOnOffSetup(RFIC_TXON);
     Rfic_SetPA(Rfic_GetTxPAPara());
+
+
+
+
     RF_PowerSet(g_ChannelVfoInfo.BandFlag,PWR_TXON);
     LedTxSwitch(LED_ON);
 }
@@ -1522,14 +1588,33 @@ extern void Rfic_SwitchFM_AM(U8 mode)
     {
         return;
     }
-
+    U16 temp = Rfic_ReadWord(0x31);
     if( mode == ModeAM )
     {
         RF_Baseband_Mode = ModeAM;
+            //Tx AM
+            
+            Rfic_WriteWord(0X31, temp & (~BIT1));// Do this things
+
+            temp = Rfic_ReadWord(0x40) & 0xE000;
+            Rfic_WriteWord(0x40,temp); // Disable vco
+
+            //Rfic_WriteWord(0x40, temp | 0X04E0);
+            //Rfic_SwitchFM_AM(ModeAM);
+            //Rfic_WriteWord( 0x36, temp1 | tblPAGain[g_CurrentVfo->txPower % 3] );// REG_36[7]: 1:Enable PACTL output  0:Disable
+    }
+    else if(mode == ModeWFM){
+        RF_Baseband_Mode = ModeWFM;
+        temp = Rfic_ReadWord(0x40) & 0xF000;
+        temp = temp | 0x1000; //enable vco
+        Rfic_WriteWord(0x40, temp | REG_40_WFM);
     }
     else
     {
-        RF_Baseband_Mode = ModeFM;
+        RF_Baseband_Mode = ModeFM; 
+        temp = Rfic_ReadWord(0x40) & 0xF000;
+        temp = temp | 0x1000; //enable vco
+        Rfic_WriteWord(0x40, temp | REG_40);
     }
 }
 

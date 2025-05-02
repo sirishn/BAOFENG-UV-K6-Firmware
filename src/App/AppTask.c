@@ -49,6 +49,7 @@ extern void AppRunTask(void)
     {
         case RF_TX:
             Radio_TxKeyTone(g_keyScan.keyEvent,g_keyScan.keyPara);
+            SetTxMod();
             break;
         case RF_RX:
         default:
