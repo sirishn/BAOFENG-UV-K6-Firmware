@@ -1,3 +1,17 @@
+##Small mods
+###Wide FM
+Tx in WFM Modulation in FM Band
+As per 200 ft rule, it cannot overpower a broadcast signal, even in the same room
+
+###AM
+Tx in radio's default AM band
+Voice not really working, so it cannot be used even for emergency purposes, except possibly lighting systems
+
+##Future work
+With more better rfic information, can possibly get a working AM modulation, based on other firmwares ideas, use mic in adc value to modulate carrier power
+Can try to open WFM Rx using FM chip, when in FM band on home page
+
+
 # SOURCE CODE FOR BAOFENG UV-K6x Radios-CNT7 UPLOAD
 ## Introduction
 
